@@ -225,7 +225,9 @@ function Grid:inbounds(x, y)
     return x >= 1 and x <= self.w and y >= 1 and y <= self.h
 end
 
----
+--- Reveals the cell at the given coordinates.
+--- Initializes mines on the first reveal, triggers flood fill for empty cells,
+--- and checks for a win condition after revealing.
 ---@param x number
 ---@param y number
 ---@return CellState
@@ -260,6 +262,10 @@ function Grid:reveal(x, y)
     return self.STATE.REVEALED
 end
 
+--- Reveals all hidden, unflagged neighbors of a revealed numbered cell,
+--- provided the number of adjacent flags matches the cell's mine count.
+---@param x number
+---@param y number
 function Grid:chord_reveal(x, y)
     if self.state ~= Grid.STATE.PLAYING then return end
 
@@ -282,6 +288,9 @@ function Grid:chord_reveal(x, y)
     end
 end
 
+--- Marks a cell as revealed, increments the revealed counter,
+--- and emits a CELL_REVEALED event.
+---@param cell table
 function Grid:_reveal_cell(cell)
     cell.state = Grid.STATE.REVEALED
     self.cells_revealed = self.cells_revealed + 1
@@ -366,6 +375,8 @@ function Grid:_check_win()
     end
 end
 
+--- Transitions the grid to the lost state, reveals all mines,
+--- and emits a grid_lost event.
 ---@private
 function Grid:set_lost()
     if self.state == "playing" then
@@ -375,6 +386,7 @@ function Grid:set_lost()
     end
 end
 
+--- Transitions the grid to the won state and emits a grid_won event.
 ---@private
 function Grid:set_won()
     if self.state == "playing" then
@@ -395,7 +407,8 @@ function Grid:_reveal_all_mines()
     end
 end
 
--- Returns all unrevealed, non-flagged, non-mine cells (for safe-reveal effects)
+--- Returns all unrevealed, non-flagged, non-mine cells (for safe-reveal effects)
+---@return table
 function Grid:getSafeCells()
     local result = {}
     for y = 1, self.h do
@@ -409,8 +422,9 @@ function Grid:getSafeCells()
     return result
 end
 
--- Returns all hidden mine cells (for mine-reveal or shift effects)
+--- Returns all hidden mine cells (for mine-reveal or shift effects)
 ---@private
+---@return table
 function Grid:_get_mine_cells()
     local result = {}
     for y = 1, self.h do
@@ -424,7 +438,9 @@ function Grid:_get_mine_cells()
     return result
 end
 
--- Reveals `count` random safe cells (used by Biscuit, Metal Detector hints, etc.)
+--- Reveals `count` random safe cells (used by Biscuit, Metal Detector hints, etc.)
+---@param count number
+---@return table
 function Grid:reveal_random_safe(count)
     local safe = self:getSafeCells()
     local revealed = {}
@@ -439,7 +455,8 @@ function Grid:reveal_random_safe(count)
     return revealed
 end
 
--- Returns a count of correctly placed flags
+--- Returns a count of correctly placed flags
+---@return number
 function Grid:correct_flag_count()
     local count = 0
     for y = 1, self.h do
@@ -456,6 +473,8 @@ end
 ------------------------------------------------------
 -- Serialization (for save/run persistence)
 
+--- Serializes the grid state to a plain table suitable for saving.
+---@return table
 function Grid:serialize()
     local data = {
         w = self.w,
@@ -483,6 +502,9 @@ function Grid:serialize()
     return data
 end
 
+--- Deserializes a plain table back into a Grid instance.
+---@param data table
+---@return Grid
 function Grid.deserialize(data)
     local self          = setmetatable({}, Grid)
     self.w              = data.w
@@ -502,8 +524,8 @@ function Grid.deserialize(data)
         for x = 1, self.w do
             local d = data.cells[y][x]
             self.cells[y][x] = {
-                x = x,
-                y = y,
+                x      = x,
+                y      = y,
                 mine   = d.mine,
                 number = d.number,
                 state  = d.state,
