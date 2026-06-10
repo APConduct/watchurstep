@@ -82,6 +82,7 @@ function Grid.new(w, h, mine_count, seed)
     }).PLAYING
 
     self.hooks = {}
+    self._hooks = {}
 
     self.cells = {}
     for y = 1, h do
@@ -105,9 +106,8 @@ end
 ---@param fn function
 ---@return nil
 function Grid:on(event, fn)
-    self
-    ._hooks[event] = self
-        ._hooks[event] or {}
+    self._hooks[event] = self._hooks[event] or {}
+    table.insert(self._hooks[event], fn)
 end
 
 --- Emits an event to all registered listeners
@@ -302,6 +302,7 @@ end
 ---@param y number
 function Grid:_flood_fill(x, y)
     local cell = self.cells[y][x]
+    if cell.number ~= 0 then return end
 
     for _, neighbor in ipairs(self:get_neighbors(x, y)) do
         if neighbor.state == Grid.STATE.HIDDEN and not neighbor.mine then
@@ -322,6 +323,7 @@ function Grid:_hit_mine(cell)
     if not data.cancel then
         cell.state = Grid.STATE.REVEALED
         self:emit("mine_hit_confirmed", { cell = cell, damage = data.damage, grid = self })
+        self:set_lost()
         return "mine"
     else
         self:emit("mine_hit_cancelled", { cell = cell, grid = self })

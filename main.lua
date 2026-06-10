@@ -26,7 +26,7 @@ local function new_game()
     renderer = GridRenderer.new(grid, CELL_SIZE, 0, MARGIN)
 
     grid:on("mine_hit_confirmed", function(data)
-        flash("Hit a mine! (-" .. data.message .. "HP)", { 0.9, 0.2, 0.1, 1 }, 1.5)
+        flash("Hit a mine! (-" .. data.damage .. "HP)", { 0.9, 0.2, 0.1, 1 }, 1.5)
     end)
 
     grid:on("mine_hit_cancelled", function(data)
