@@ -1,7 +1,16 @@
+---@class GridRenderer
+---@field cell_size number
+---@field cell_padding number
+---@field _colors ColorPalette
+---@field grid Grid
+---@field ox number
+---@field oy number
+---@field font love.Font
 local GridRenderer = {}
 GridRenderer.__index = GridRenderer
 
 -- Palette — earthy/industrial to match the miner theme
+---@enum ColorPalette
 local COLORS = {
     -- cell backgrounds
     hidden          = { 0.25, 0.22, 0.18, 1 }, -- dark soil
@@ -33,6 +42,12 @@ local COLORS = {
     scouted_warn    = { 0.90, 0.40, 0.10, 0.30 }, -- faint orange danger hint
 }
 
+---
+---@param grid any
+---@param cell_size any
+---@param offset_x any
+---@param offset_y any
+---@return GridRenderer
 function GridRenderer.new(grid, cell_size, offset_x, offset_y)
     local self     = setmetatable({}, GridRenderer)
     self.grid      = grid
@@ -46,28 +61,32 @@ end
 
 -- Coordinate conversion
 
--- Screen px -> grid cell (1-indexed). Returns nil if out of bounds.
-function GridRenderer:screenToGrid(sx, sy)
+---Screen px -> grid cell (1-indexed). Returns nil if out of bounds.
+---@param sx number
+---@param sy number
+---@return integer|nil, integer|nil
+function GridRenderer:screen_to_grid(sx, sy)
     local gx = math.floor((sx - self.ox) / self.cell_size) + 1
     local gy = math.floor((sy - self.oy) / self.cell_size) + 1
-    if self.grid:inBounds(gx, gy) then
+    if self.grid:inbounds(gx, gy) then
         return gx, gy
     end
     return nil, nil
 end
 
--- Grid cell -> top-left screen pixel
-function GridRenderer:gridToScreen(gx, gy)
+---Grid cell -> top-left screen pixel
+---@param gx integer
+---@param gy integer
+---@return number, number
+function GridRenderer:grid_to_screen(gx, gy)
     return self.ox + (gx - 1) * self.cell_size,
         self.oy + (gy - 1) * self.cell_size
 end
 
-------------------------------------------------------
--- Mouse tracking
-------——--————————————————----------
-
+---@param sx number
+---@param sy number
 function GridRenderer:mousemoved(sx, sy)
-    local gx, gy = self:screenToGrid(sx, sy)
+    local gx, gy = self:screen_to_grid(sx, sy)
     if gx then
         self.hovered = { x = gx, y = gy }
     else
@@ -75,14 +94,13 @@ function GridRenderer:mousemoved(sx, sy)
     end
 end
 
+---@return nil
 function GridRenderer:mouseleave()
     self.hovered = nil
 end
 
-------------------------------------------------------
--- Main draw
-------------—--———————————----------------
-
+---Main draw
+---@return nil
 function GridRenderer:draw()
     local cs = self.cell_size
     local grid = self.grid
@@ -90,25 +108,32 @@ function GridRenderer:draw()
     for y = 1, grid.h do
         for x = 1, grid.w do
             local cell = grid.cells[y][x]
-            local sx, sy = self:gridToScreen(x, y)
-            self:_drawCell(cell, sx, sy, cs)
+            local sx, sy = self:grid_to_screen(x, y)
+            self:_draw_cell(cell, sx, sy, cs)
         end
     end
 
     -- — Hover highlight drawn on top
     if self.hovered then
-        local cell = grid:getCell(self.hovered.x, self.hovered.y)
+        local cell = grid:get_cell(self.hovered.x, self.hovered.y)
         if cell and cell.state ~= "revealed" then
-            local sx, sy = self:gridToScreen(self.hovered.x, self.hovered.y)
+            local sx, sy = self:grid_to_screen(self.hovered.x, self.hovered.y)
             love.graphics.setColor(COLORS.highlight)
-            love.graphics.rectangle("fill", sx + 1, sy + 1, cs - 2, cs - 2)
+            love.graphics.rectangle(
+                "fill",
+                sx + 1, sy + 1, cs - 2, cs - 2)
         end
     end
 
     love.graphics.setColor(1, 1, 1, 1) -- reset
 end
 
-function GridRenderer:_drawCell(cell, sx, sy, cs)
+---@private
+---@param cell Cell
+---@param sx number
+---@param sy number
+---@param cs number
+function GridRenderer:_draw_cell(cell, sx, sy, cs)
     local state = cell.state
 
     -- Background
@@ -133,18 +158,18 @@ function GridRenderer:_drawCell(cell, sx, sy, cs)
     -- Content
     if state == "revealed" then
         if cell.mine then
-            self:_drawMine(sx, sy, cs)
+            self:_draw_mine(sx, sy, cs)
         elseif cell.number > 0 then
-            self:_drawNumber(cell.number, sx, sy, cs)
+            self:_draw_number(cell.number, sx, sy, cs)
         end
     elseif state == "flagged" then
-        self:_drawFlag(sx, sy, cs)
+        self:_draw_flag(sx, sy, cs)
     elseif state == "scouted" then
-        self:_drawScoutedHint(cell, sx, sy, cs)
+        self:_draw_scouted_hint(cell, sx, sy, cs)
     end
 end
 
-function GridRenderer:_drawNumber(n, sx, sy, cs)
+function GridRenderer:_draw_number(n, sx, sy, cs)
     local color = COLORS.numbers[n] or { 0.1, 0.1, 0.1, 1 }
     love.graphics.setColor(color)
     love.graphics.setFont(self.font)
@@ -155,7 +180,12 @@ function GridRenderer:_drawNumber(n, sx, sy, cs)
     )
 end
 
-function GridRenderer:_drawMine(sx, sy, cs)
+---@private
+--- Draws a mine at the given position and size.
+--- @param sx number
+--- @param sy number
+--- @param cs number
+function GridRenderer:_draw_mine(sx, sy, cs)
     love.graphics.setColor(COLORS.mine)
     local pad = cs * 0.22
     local cx  = sx + cs / 2
@@ -182,7 +212,12 @@ function GridRenderer:_drawMine(sx, sy, cs)
     love.graphics.circle("fill", cx - r * 0.25, cy - r * 0.25, r * 0.25)
 end
 
-function GridRenderer:_drawFlag(sx, sy, cs)
+---@private
+--- Draws a flag at the given position and size.
+--- @param sx number
+--- @param sy number
+--- @param cs number
+function GridRenderer:_draw_flag(sx, sy, cs)
     local pad    = cs * 0.2
     local bx     = sx + pad
     local by     = sy + cs * 0.65
@@ -208,7 +243,11 @@ function GridRenderer:_drawFlag(sx, sy, cs)
 end
 
 -- Scouted hint: used by The Brush tool — shows safe/danger without full reveal
-function GridRenderer:_drawScoutedHint(cell, sx, sy, cs)
+--- @param cell Cell
+--- @param sx number
+--- @param sy number
+--- @param cs number
+function GridRenderer:_draw_scouted_hint(cell, sx, sy, cs)
     if cell.safe ~= nil then
         if cell.safe then
             love.graphics.setColor(COLORS.scouted_safe)
@@ -219,12 +258,11 @@ function GridRenderer:_drawScoutedHint(cell, sx, sy, cs)
     end
 end
 
-------------------------------------------------------
 -- HUD helpers
-----------—--—————————————--------------
 
--- Returns total pixel dimensions of the grid
-function GridRenderer:getDimensions()
+---Returns total pixel dimensions of the grid
+---@return number, number
+function GridRenderer:get_dimensions()
     return self.grid.w * self.cell_size, self.grid.h * self.cell_size
 end
 

@@ -1,3 +1,4 @@
+---@diagnostic disable: duplicate-set-field
 local W, H = 120, 80
 local CELL = 8
 
@@ -111,6 +112,7 @@ local selected_pattern = 1
 
 
 
+---@diagnostic disable-next-line: duplicate-set-field
 function love.load()
     love.window.setMode(W * CELL, H * CELL + 40)
     love.window.setTitle("Game of Life")
@@ -191,6 +193,7 @@ function love.draw()
     love.graphics.print(status, W * CELL - 100, hy + 4)
 end
 
+---@diagnostic disable-next-line: duplicate-set-field
 function love.mousepressed(mx, my, btn)
     if my >= H * CELL then
         return
